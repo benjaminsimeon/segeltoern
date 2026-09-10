@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Törn-Briefing — Crew-Ausbildung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --deep:#04162B; --ink:#0A2540; --chart:#0E3556;
+  --paper:#EFE6D0; --paper-dim:#9FAEBE;
+  --red:#C8102E; --yellow:#F5B301; --blue:#1B4FA0;
+  --sea:#1F7A8C; --green:#2E7D4F; --ok:#3FCF7F;
+  --rule:rgba(239,230,208,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--deep);
+  background-image:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 44px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 44px);
+  color:var(--paper);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.disp{font-family:"Oswald","Arial Narrow",Impact,sans-serif;font-weight:600;line-height:1.1;margin:0}
+h1{font-size:clamp(30px,6vw,52px)}
+h2{font-size:clamp(21px,3.4vw,29px)}
+p{margin:0 0 12px;max-width:64ch}
+.wrap{max-width:940px;margin:0 auto;padding:26px 20px 72px}
+.screen{display:none}
+.screen.on{display:block}
+.sub{color:var(--paper-dim);font-size:15px}
+.tnum{font-variant-numeric:tabular-nums}
+button{font:inherit}
+.btn{display:inline-block;background:transparent;color:var(--paper);border:1px solid var(--paper);
+  border-radius:2px;padding:9px 16px;cursor:pointer;transition:background .12s,color .12s}
+.btn:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-go{background:var(--yellow);border-color:var(--yellow);color:#132638;font-weight:600}
+.btn-go:hover:not(:disabled){background:#ffc93c;border-color:#ffc93c;color:#132638}
+.btn-ghost{border-color:var(--rule);color:var(--paper-dim)}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+
+#screen-login .wrap{max-width:470px;padding-top:9vh}
+.loginbox{background:var(--ink);border:1px solid var(--rule);padding:24px;margin-top:22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--paper-dim);margin-bottom:5px}
+.field input{width:100%;padding:10px 12px;background:var(--deep);color:var(--paper);
+  border:1px solid var(--rule);border-radius:2px;font:inherit}
+.field input:focus{border-color:var(--yellow);outline:none}
+.err{color:#FF7A85;font-size:14px;min-height:20px;margin:2px 0 8px}
+
+/* --- Flaggen --- */
+.halyard{display:flex;gap:10px;align-items:flex-start;margin:12px 0 4px;flex-wrap:wrap}
+.flagslot{width:74px}
+.flag{width:74px;height:50px;border:1px solid rgba(0,0,0,.35);background:#26384B;display:block;overflow:hidden}
+.flag.locked{background:repeating-linear-gradient(45deg,#22344a 0 6px,#1c2c3f 6px 12px)}
+.flag svg{display:block;width:100%;height:100%}
+.flagslot .lbl{font-size:12px;color:var(--paper-dim);margin-top:5px;text-align:center}
+.flagslot.done .lbl{color:var(--paper)}
+@media (prefers-reduced-motion:no-preference){
+  .flag.hoist{animation:hoist .85s cubic-bezier(.16,.9,.3,1)}
+}
+@keyframes hoist{from{transform:translateY(54px);opacity:0}to{transform:translateY(0);opacity:1}}
+.legendflags{font-size:13px;color:var(--paper-dim);margin:0 0 4px}
+.flagrow{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-top:12px}
+.flagrow .halyard{margin:0}
+/* Knopf auf die Höhe der Flaggentücher, nicht auf die der ganzen Spalte */
+.flagrow #revealcta{display:flex;align-items:center;height:50px}
+
+.stations{margin:24px 0 0;border-top:1px solid var(--rule)}
+.station{display:flex;gap:16px;align-items:center;padding:15px 4px;border-bottom:1px solid var(--rule)}
+.station .num{font-family:"Oswald",sans-serif;font-size:26px;color:var(--paper-dim);width:30px;flex:0 0 30px}
+.station .meta{flex:1;min-width:0}
+.station .meta .t{font-family:"Oswald",sans-serif;font-size:20px}
+.station .meta .d{font-size:14px;color:var(--paper-dim)}
+.station .score{font-family:"Oswald",sans-serif;font-size:22px;width:74px;text-align:right;flex:0 0 74px}
+.station.locked{opacity:.45}
+.station.done .num{color:var(--yellow)}
+
+table.board{width:100%;border-collapse:collapse;margin-top:12px}
+.board th{text-align:left;font-weight:400;font-size:13px;color:var(--paper-dim);padding:0 8px 7px 0;border-bottom:1px solid var(--paper-dim)}
+.board td{padding:9px 8px 9px 0;border-bottom:1px solid var(--rule);vertical-align:middle}
+.board .r{text-align:right}
+.board tr.me td{background:rgba(245,179,1,.09)}
+.pips{display:flex;gap:4px}
+.pip{width:11px;height:11px;border:1px solid var(--paper-dim);border-radius:50%}
+.pip.f{background:var(--yellow);border-color:var(--yellow)}
+
+.gamehead{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.panel{background:var(--ink);border:1px solid var(--rule);padding:20px;margin-top:18px}
+.q{font-family:"Oswald",sans-serif;font-size:clamp(19px,3vw,25px);margin-bottom:14px}
+.opts{display:grid;gap:9px}
+.opt{text-align:left;width:100%;padding:12px 14px;background:var(--chart);color:var(--paper);
+  border:1px solid var(--rule);border-radius:2px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--paper)}
+.opt.right{border-color:var(--ok);background:rgba(63,207,127,.18)}
+.opt.wrong{border-color:var(--red);background:rgba(200,16,46,.16)}
+.opt:disabled{cursor:default}
+.fb{margin-top:16px;padding:13px 15px;border-left:3px solid var(--ok);background:rgba(255,255,255,.04);font-size:15px}
+.fb.bad{border-left-color:var(--red)}
+.fb p{margin:0}
+.prog{font-size:14px;color:var(--paper-dim)}
+.timer{font-family:"Oswald",sans-serif;font-size:22px;color:var(--yellow)}
+.timer.hot{color:var(--red)}
+.scene{width:100%;height:auto;background:#08243D;border:1px solid var(--rule);display:block}
+.spot{cursor:pointer}
+.legend{font-size:13px;color:var(--paper-dim);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px}
+
+.battle{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;width:min(392px,80vw)}
+.cell{aspect-ratio:1;background:var(--chart);border:1px solid rgba(255,255,255,.07);border-radius:1px;
+  cursor:crosshair;display:flex;align-items:center;justify-content:center;
+  font-family:"Oswald",sans-serif;font-size:17px;color:var(--paper);padding:0}
+.cell:hover:not(:disabled){background:#16456B}
+.cell.miss{background:#0A2A45;color:var(--paper-dim);cursor:default}
+.cell.hit{background:var(--red);cursor:default}
+.cell.hit,.cell.sunk{font-size:28px;line-height:1;font-weight:600}
+.cell.sunk{background:#7A0C1E;cursor:default}
+.fleet{list-style:none;padding:0;margin:0;font-size:14px;min-width:210px;flex:1}
+.fleet li{padding:6px 0;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;gap:10px}
+.fleet li.dead{color:var(--paper-dim);text-decoration:line-through}
+.boat{width:100%;height:auto;max-width:520px;background:#08243D;border:1px solid var(--rule)}
+
+.center{text-align:center}
+.bigplace{font-family:"Oswald",sans-serif;font-size:clamp(38px,9vw,80px);color:var(--yellow);line-height:1;margin:14px 0 6px}
+.banner{background:rgba(200,16,46,.14);border:1px solid rgba(200,16,46,.5);padding:10px 14px;font-size:14px;margin-bottom:16px}
+.banner.prac{background:rgba(245,179,1,.12);border-color:rgba(245,179,1,.5)}
+.station .extra{display:flex;gap:8px;align-items:center}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:26px;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.topbar .who{font-family:"Oswald",sans-serif;font-size:19px}
+hr.rule{border:0;border-top:1px solid var(--rule);margin:34px 0 20px}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+
+/* --- Finale --- */
+.finale{width:100%;height:auto;max-width:680px;display:block;margin:0 auto;border:1px solid var(--rule)}
+.lava,.smoke,.ember,.bomb,.glow{transform-box:fill-box;transform-origin:center}
+.rock{transform-box:fill-box;transform-origin:50% 90%}
+@media (prefers-reduced-motion:no-preference){
+  .lava{animation:lava 1.9s ease-out infinite}
+  .bomb{animation:bomb 3.6s cubic-bezier(.22,.55,.4,1) infinite}
+  .smoke{animation:smoke 7.5s ease-out infinite}
+  .ember{animation:ember 5s linear infinite}
+  .glow{animation:glow 2.1s ease-in-out infinite}
+  .flowline{animation:flowpulse 2.6s ease-in-out infinite}
+  .rock{animation:rock 5s ease-in-out infinite}
+  .wv{animation:wv 6s linear infinite}
+}
+@keyframes lava{0%{transform:translate(0,0) scale(1);opacity:0}8%{opacity:1}100%{transform:translate(var(--lx,0px),var(--ly,-140px)) scale(.3);opacity:0}}
+@keyframes bomb{0%{transform:translate(0,0) scale(1);opacity:0}7%{opacity:1}75%{opacity:.9}100%{transform:translate(var(--bx,110px),var(--by,80px)) scale(.6);opacity:0}}
+@keyframes smoke{0%{transform:translate(0,0) scale(.4);opacity:0}18%{opacity:.5}100%{transform:translate(var(--sx,-30px),-220px) scale(3);opacity:0}}
+@keyframes ember{0%{transform:translate(0,0);opacity:0}12%{opacity:.95}100%{transform:translate(var(--ex,30px),200px);opacity:0}}
+@keyframes glow{0%,100%{opacity:.45;transform:scale(.92)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes flowpulse{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes rock{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.4deg)}}
+@keyframes wv{0%{transform:translateX(0)}100%{transform:translateX(-60px)}}
+</style>
+</head>
+<body>
+
+<canvas id="confetti" hidden></canvas>
+
+<section id="screen-login" class="screen on"><div class="wrap">
+  <h1>Törn-Briefing</h1>
+  <p class="sub">Fünf Prüfungen. Wer alle fünf hinter sich hat, erfährt, wo das Boot liegt.</p>
+  <div class="loginbox">
+    <div class="field"><label for="u">Crew-Name</label><input id="u" autocomplete="username" spellcheck="false"></div>
+    <div class="field"><label for="p">Kennwort</label><input id="p" type="password" autocomplete="current-password"></div>
+    <div class="err" id="loginerr"></div>
+    <button class="btn btn-go" id="dologin">Anmustern</button>
+  </div>
+</div></section>
+
+<section id="screen-home" class="screen"><div class="wrap">
+  <div class="topbar">
+    <div class="who" id="whoami"></div>
+    <button class="btn btn-ghost" id="logout">Abmustern</button>
+  </div>
+  <div id="offline-note"></div>
+  <h1>Fünf Flaggen bis zum Hafen</h1>
+  <p class="sub" id="homelede"></p>
+  <div class="flagrow"><div id="boatwrap"></div><div id="revealcta"></div></div>
+  <p class="legendflags" id="flaglede"></p>
+  <div class="stations" id="stations"></div>
+  <hr class="rule">
+  <div class="gamehead"><h2>Leaderboard</h2><button class="btn btn-ghost" id="refresh">Aktualisieren</button></div>
+  <p class="sub">Alle Ergebnisse sind für die ganze Crew sichtbar. Das ist der Punkt.</p>
+  <table class="board"><thead><tr>
+    <th style="width:34px">#</th><th>Crew</th><th>Fortschritt</th><th class="r">Punkte</th>
+  </tr></thead><tbody id="boardbody"></tbody></table>
+</div></section>
+
+<section id="screen-game" class="screen"><div class="wrap">
+  <div class="topbar">
+    <button class="btn btn-ghost" id="quitgame">Abbrechen (Stand wird gewertet)</button>
+    <div class="prog" id="gprog"></div>
+  </div>
+  <div id="practicebar"></div>
+  <div id="gamebody"></div>
+</div></section>
+
+<section id="screen-reveal" class="screen"><div class="wrap center" id="revealbody"></div></section>
+
+<script>
+/* =========================================================
+   Verbindung zum Server. Kennwörter, richtige Reihenfolge,
+   Buchstaben und der Hafen liegen in api.php und config.php
+   und nie hier im Browser.
+   ========================================================= */
+let S = null;              // letzter Zustand vom Server
+let netzfehler = false;
+
+async function api(aktion, daten){
+  const r = await fetch("api.php?a="+aktion, {
+    method: daten ? "POST" : "GET",
+    headers: daten ? {"Content-Type":"application/json"} : undefined,
+    body: daten ? JSON.stringify(daten) : undefined,
+    credentials: "same-origin",
+    cache: "no-store"
+  });
+  let d = {};
+  try{ d = await r.json(); }catch(e){ d = {ok:false, grund:"Server antwortet nicht wie erwartet."}; }
+  d.status = r.status;
+  return d;
+}
+function letterOf(gameId){ return (S && S.letters && S.letters[gameId]) || "?"; }
+
+const GAMES = [
+  {id:"vokabeln",  title:"Schiffsvokabeln",   desc:"Zehn Teile am Boot — und die Uhr läuft mit."},
+  {id:"mob",       title:"Mann über Bord",    desc:"Sechs Schritte. Jeder Fehler kostet Sekunden, die keiner hat."},
+  {id:"versenken", title:"Schiffe versenken", desc:"Die Flotte des Skippers liegt im Nebel. Munition ist knapp."},
+  {id:"kommando",  title:"Bordkommandos",     desc:"Acht Zurufe, fünfzehn Sekunden pro Stück."},
+  {id:"anker",     title:"Ankerplatz",        desc:"Vier Buchten, eine ruhige Nacht."}
+];
+const MAXG = 100, GN = GAMES.length;
+
+
+/* --- Signalflaggen --- */
+function flagSVG(letter){
+  switch(letter){
+    case "P": return '<rect width="60" height="40" fill="#1B4FA0"/><rect x="18" y="11" width="24" height="18" fill="#EFE6D0"/>';
+    case "O": return '<polygon points="0,0 60,0 0,40" fill="#C8102E"/><polygon points="60,0 60,40 0,40" fill="#F5B301"/>';
+    case "R": return '<rect width="60" height="40" fill="#C8102E"/><rect y="16" width="60" height="8" fill="#F5B301"/><rect x="26" width="8" height="40" fill="#F5B301"/>';
+    case "T": return '<rect width="20" height="40" fill="#C8102E"/><rect x="20" width="20" height="40" fill="#EFE6D0"/><rect x="40" width="20" height="40" fill="#1B4FA0"/>';
+  }
+  return '<rect width="60" height="40" fill="#26384B"/>';
+}
+/* --- Flaggenleine --- */
+function halyardHTML(done, justId){
+  return '<div class="halyard">'+GAMES.map(g=>{
+    if(done[g.id]===undefined)
+      return '<div class="flagslot"><span class="flag locked"></span><div class="lbl">?</div></div>';
+    const l=letterOf(g.id);
+    return '<div class="flagslot done"><span class="flag'+(g.id===justId?" hoist":"")+'">'+
+           '<svg viewBox="0 0 60 40" preserveAspectRatio="none">'+flagSVG(l)+'</svg></span>'+
+           '<div class="lbl">'+l+'</div></div>';
+  }).join("")+'</div>';
+}
+
+/* --- Zustand vom Server holen --- */
+async function loadAll(){
+  const d = await api("state");
+  if(d.ok){ S = d; netzfehler = false; }
+  else if(d.status !== 401){ netzfehler = true; }
+  return d;
+}
+
+/* --- Zustand --- */
+let activeTimer=null, justEarned=null, practice=false;
+const me = new Proxy({}, { get:(_,k)=> S && S.me ? S.me[k] : "" });
+const $ = s=>document.querySelector(s);
+const el=(t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!==undefined)n.innerHTML=h; return n;};
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  $("#screen-"+id).classList.add("on"); window.scrollTo(0,0);
+}
+function scoresOf(){ return (S && S.scores) || {}; }
+function totalOf(){ const s=scoresOf(); return GAMES.reduce((a,g)=>a+(s[g.id]||0),0); }
+function doneCount(){ const s=scoresOf(); return GAMES.filter(g=>s[g.id]!==undefined).length; }
+function allDone(){ return !!(S && S.allDone); }
+
+/* --- Login --- */
+$("#dologin").addEventListener("click", doLogin);
+$("#p").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+$("#u").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#p").focus(); });
+async function doLogin(){
+  const u=$("#u").value.trim().toLowerCase(), p=$("#p").value;
+  const b=$("#dologin"); b.disabled=true; $("#loginerr").textContent="";
+  const d=await api("login",{user:u,pass:p});
+  b.disabled=false;
+  if(!d.ok){ $("#loginerr").textContent = d.grund || "Anmeldung fehlgeschlagen."; return; }
+  S=d; $("#p").value=""; renderHome(); show("home");
+}
+$("#refresh").addEventListener("click", async ()=>{ await loadAll(); renderHome(); });
+$("#logout").addEventListener("click", async ()=>{ await api("logout"); S=null; $("#p").value=""; show("login"); $("#u").focus(); });
+$("#quitgame").addEventListener("click", zurueckAnDeck);
+
+/* --- Startseite --- */
+function renderHome(){
+  $("#whoami").textContent=me.name;
+  const done=doneCount(), s=scoresOf();
+  $("#homelede").textContent = done===0
+    ? "Fünf Prüfungen, je 100 Punkte."
+    : (allDone() ? "Alle Flaggen stehen. Lies die Leine." : "Noch "+(GN-done)+" von "+GN+".");
+  $("#flaglede").textContent = allDone()
+    ? "Alle fünf Signalflaggen stehen. Zusammen buchstabieren sie den Hafen."
+    : "Weiß heißt: noch nicht verdient. Jede bestandene Prüfung hisst eine Signalflagge. Zusammen buchstabieren sie den Hafen.";
+  let hinweis = netzfehler
+    ? '<div class="banner">Der Server war gerade nicht erreichbar. Die Anzeige kann veraltet sein — einmal auf Aktualisieren tippen.</div>' : "";
+  if(verfallHinweis){
+    hinweis += verfallHinweis.grund
+      ? '<div class="banner">'+verfallHinweis.grund+'</div>'
+      : '<div class="banner">Ein offener Durchgang ist verfallen und wurde mit '+verfallHinweis.punkte+' Punkten gewertet.</div>';
+    verfallHinweis=null;
+  }
+  $("#offline-note").innerHTML = hinweis;
+  $("#boatwrap").innerHTML = halyardHTML(s, justEarned);
+  justEarned=null;
+
+  const st=$("#stations"); st.innerHTML="";
+  GAMES.forEach((g,i)=>{
+    const sc=s[g.id], locked = i>0 && s[GAMES[i-1].id]===undefined;
+    const row=el("div","station"+(locked?" locked":"")+(sc!==undefined?" done":""));
+    row.innerHTML='<div class="num">'+(i+1)+'</div><div class="meta"><div class="t">'+g.title+
+      '</div><div class="d">'+(locked?"Erst die Prüfung davor.":g.desc)+'</div></div>'+
+      '<div class="score tnum">'+(sc!==undefined?sc:"")+'</div>';
+    const cell=el("div");
+    if(sc===undefined && !locked){
+      const b=el("button","btn btn-go","Antreten");
+      b.addEventListener("click",()=>startGame(g.id)); cell.appendChild(b);
+    } else if(sc!==undefined){
+      const pb=el("button","btn btn-ghost","Üben");
+      pb.title="Übungslauf ohne Wertung";
+      pb.addEventListener("click",()=>startGame(g.id,true));
+      cell.appendChild(pb);
+    }
+    row.appendChild(cell); st.appendChild(row);
+  });
+
+  const rb=el("button","btn btn-go","Hafen aufdecken");
+  rb.disabled=!allDone();
+  if(rb.disabled) rb.title="Erst alle fünf Prüfungen.";
+  rb.addEventListener("click",openReveal);
+  $("#revealcta").innerHTML=""; $("#revealcta").appendChild(rb);
+
+  const tb=$("#boardbody"); tb.innerHTML="";
+  ((S&&S.board)||[]).forEach((r,i)=>{
+    const tr=el("tr", r.user===me.user?"me":"");
+    const pips=(r.done||[]).map(d=>'<span class="pip'+(d?" f":"")+'"></span>').join("");
+    tr.innerHTML='<td class="tnum">'+(i+1)+'</td><td>'+r.name+'</td><td><div class="pips">'+pips+
+      '</div></td><td class="r tnum">'+r.total+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+async function finishGame(gameId, raw, lines){
+  const score=Math.max(0,Math.min(MAXG,Math.round(raw)));
+  const body=$("#gamebody");
+  if(practice){
+    const best=scoresOf()[gameId];
+    body.innerHTML='<h1>'+score+' von 100</h1>'+
+      '<p class="sub">Übungslauf. Zählt nicht. Gewertet stehen weiterhin '+best+' Punkte.</p>'+
+      '<div class="panel">'+lines.map(l=>'<p>'+l+'</p>').join("")+'</div>';
+    const again=el("button","btn","Nochmal üben");
+    again.style.marginTop="18px";
+    again.addEventListener("click",()=>startGame(gameId,true));
+    const back=el("button","btn btn-go","Zurück an Deck");
+    back.style.cssText="margin-top:18px;margin-left:10px";
+    back.addEventListener("click",()=>{ practice=false; $("#practicebar").innerHTML=""; renderHome(); show("home"); });
+    body.appendChild(again); body.appendChild(back);
+    $("#gprog").textContent="";
+    return;
+  }
+  const d=await api("submit",{game:gameId, score:score});
+  if(d.ok){ S=d.state; netzfehler=false; }
+  else { netzfehler=true; if(d.state) S=d.state; }
+  justEarned=gameId;
+  body.innerHTML='<h1>'+score+' von 100</h1>'+
+    halyardHTML(scoresOf(), gameId)+
+    '<p class="sub">Flagge steht. Ein Buchstabe mehr an der Leine.</p>'+
+    '<div class="panel">'+lines.map(l=>'<p>'+l+'</p>').join("")+'</div>';
+  const b=el("button","btn btn-go","Zurück an Deck");
+  b.style.marginTop="18px";
+  b.addEventListener("click",()=>{ practice=false; $("#practicebar").innerHTML=""; renderHome(); show("home"); });
+  body.appendChild(b);
+  $("#gprog").textContent="";
+}
+function startGame(id, asPractice){
+  clearInterval(activeTimer);
+  practice = !!asPractice;
+  $("#practicebar").innerHTML = practice
+    ? '<div class="banner prac">Übungslauf. Zählt nicht und ändert nichts am Leaderboard. Bei Vokabeln und Kommandos werden die Fragen hier zufällig aus dem ganzen Bestand gezogen, also jedes Mal andere.</div>'
+    : "";
+  $("#gamebody").innerHTML=""; $("#gprog").textContent="";
+  show("game");
+  ({anker:gameAnker,mob:gameMOB,kommando:gameKommando,versenken:gameVersenken,vokabeln:gameVokabeln})[id]();
+}
+
+/* --- Buchten und Bootsbild: reine Grafik, verrät nichts --- */
+const SCALE = '<g stroke="#EFE6D0" stroke-width="1.5" opacity=".8">'+
+  '<line x1="20" y1="224" x2="120" y2="224"/><line x1="20" y1="219" x2="20" y2="229"/>'+
+  '<line x1="120" y1="219" x2="120" y2="229"/></g>'+
+  '<text x="126" y="228" fill="#EFE6D0" font-size="11" font-family="IBM Plex Sans,sans-serif" opacity=".85">100 m</text>'+
+  '<ellipse cx="26" cy="208" rx="6" ry="2.2" fill="#EFE6D0"/>'+
+  '<text x="38" y="212" fill="#EFE6D0" font-size="11" font-family="IBM Plex Sans,sans-serif" opacity=".85">unser Boot, 12 m</text>';
+
+const ANKER=[
+{id:"ank1",
+ brief:"Das Land liegt im Norden, die Bucht öffnet sich nach Süden. Wind: 5 Bft aus Nord, die ganze Nacht. Wo fällt der Anker?",
+ legend:'<span><i style="background:#2E7D4F"></i>Land</span><span><i style="background:#F5B301"></i>Wind</span><span><i style="background:#C8102E"></i>Taleinschnitt</span>',
+ svg:'<rect width="400" height="240" fill="#0C3A5C"/>'+
+     '<polygon points="0,0 400,0 400,64 368,66 358,34 348,66 320,92 250,70 175,104 105,72 40,96 0,80" fill="#2E7D4F"/>'+
+     '<g stroke="#F5B301" stroke-width="3" fill="none"><path d="M40 116 L40 166"/><path d="M32 156 L40 168 L48 156"/></g>'+
+     '<text x="54" y="146" fill="#F5B301" font-size="12" font-family="Oswald,sans-serif">Wind aus Nord</text>'+
+     '<g stroke="#C8102E" stroke-width="2" fill="none" stroke-dasharray="4 4"><path d="M358 72 L358 116"/><path d="M352 108 L358 118 L364 108"/></g>'+
+     '<text x="170" y="24" fill="#0A2540" font-size="12" font-family="IBM Plex Sans,sans-serif">Land</text>'+SCALE,
+ spots:[{id:"C",x:215,y:196},{id:"D",x:218,y:130},{id:"A",x:64,y:162},{id:"B",x:358,y:142}],
+},
+{id:"ank2",
+ brief:"Ihr habt 40 Meter Kette an Bord. Faustregel: mindestens die vierfache Wassertiefe. Das Boot geht 2 Meter tief. Zahlen sind Meter.",
+ legend:'<span><i style="background:#2E7D4F"></i>Land</span><span><i style="background:#C8102E"></i>Fahrwasser zum Hafen</span><span><i style="background:#0C3A5C"></i>je dunkler, desto tiefer</span>',
+ svg:'<rect width="400" height="240" fill="#0A4A72"/>'+
+     '<path d="M0 240 L400 240 L400 150 L300 132 L210 120 L120 138 L40 120 L0 128 Z" fill="#1B6E8C"/>'+
+     '<path d="M0 240 L400 240 L400 186 L300 172 L210 160 L120 176 L40 158 L0 166 Z" fill="#3E97B0"/>'+
+     '<path d="M0 240 L400 240 L400 214 L280 206 L150 212 L0 202 Z" fill="#2E7D4F"/>'+
+     '<g stroke="#C8102E" stroke-width="2" stroke-dasharray="7 6" fill="none"><path d="M60 20 L92 200"/><path d="M150 20 L172 204"/></g>'+
+     '<circle cx="104" cy="96" r="5" fill="#C8102E"/><circle cx="140" cy="96" r="5" fill="#C8102E"/>'+
+     '<text x="196" y="228" fill="#0A2540" font-size="12" font-family="IBM Plex Sans,sans-serif">Land</text>'+
+     '<text x="248" y="200" fill="#0A2540" font-size="13" font-family="Oswald,sans-serif">3 m</text>'+
+     '<text x="248" y="166" fill="#EFE6D0" font-size="13" font-family="Oswald,sans-serif">8 m</text>'+
+     '<text x="248" y="112" fill="#EFE6D0" font-size="13" font-family="Oswald,sans-serif">25 m</text>'+
+     '<text x="122" y="76" fill="#C8102E" font-size="12" font-family="Oswald,sans-serif">Hafeneinfahrt</text>'+SCALE,
+ spots:[{id:"D",x:300,y:196},{id:"A",x:300,y:156},{id:"B",x:300,y:80},{id:"C",x:130,y:150}],
+},
+{id:"ank3",
+ brief:"Ruhige Bucht, kein Wetterproblem. Aber der Grund wechselt. Hellgelb ist Sand, dunkelgrün ist Seegras. Zahlen sind Meter.",
+ legend:'<span><i style="background:#D9C89A"></i>Sand</span><span><i style="background:#1E5C3A"></i>Seegras</span>',
+ svg:'<rect width="400" height="240" fill="#0C3A5C"/>'+
+     '<ellipse cx="110" cy="80" rx="70" ry="42" fill="#1E5C3A"/>'+
+     '<ellipse cx="300" cy="170" rx="78" ry="44" fill="#1E5C3A"/>'+
+     '<ellipse cx="255" cy="70" rx="62" ry="38" fill="#D9C89A" opacity=".85"/>'+
+     '<ellipse cx="90" cy="180" rx="52" ry="32" fill="#D9C89A" opacity=".85"/>'+
+     '<polygon points="0,240 400,240 400,228 0,222" fill="#2E7D4F"/>'+
+     '<text x="243" y="74" fill="#0A2540" font-size="13" font-family="Oswald,sans-serif">6 m</text>'+
+     '<text x="78" y="184" fill="#0A2540" font-size="13" font-family="Oswald,sans-serif">28 m</text>'+
+     '<text x="96" y="84" fill="#EFE6D0" font-size="13" font-family="Oswald,sans-serif">7 m</text>'+
+     '<text x="288" y="174" fill="#EFE6D0" font-size="13" font-family="Oswald,sans-serif">9 m</text>',
+ spots:[{id:"D",x:110,y:60},{id:"B",x:262,y:52},{id:"C",x:90,y:196},{id:"A",x:312,y:186}],
+},
+{id:"ank4",
+ brief:"Kleine Bucht, ein Boot liegt schon. Der gestrichelte Kreis ist sein Schwojkreis, die roten Punkte sind Felsen knapp unter Wasser.",
+ legend:'<span><i style="background:#EFE6D0"></i>Schwojkreis</span><span><i style="background:#C8102E"></i>Felsen</span>',
+ svg:'<rect width="400" height="240" fill="#0C3A5C"/>'+
+     '<polygon points="0,240 400,240 400,206 250,214 130,196 0,206" fill="#2E7D4F"/>'+
+     '<circle cx="140" cy="96" r="62" fill="none" stroke="#EFE6D0" stroke-width="2" stroke-dasharray="6 6" opacity=".8"/>'+
+     '<ellipse cx="140" cy="96" rx="7" ry="15" fill="#EFE6D0"/>'+
+     '<g fill="#C8102E"><circle cx="330" cy="70" r="7"/><circle cx="348" cy="92" r="6"/><circle cx="312" cy="92" r="5"/></g>'+
+     '<text x="118" y="30" fill="#EFE6D0" font-size="12" font-family="IBM Plex Sans,sans-serif">belegt</text>',
+ spots:[{id:"B",x:186,y:60},{id:"C",x:236,y:150},{id:"D",x:330,y:132},{id:"A",x:120,y:150}],
+}];
+
+function boatSVG(mark){
+  const m=mark?'<circle cx="'+mark[0]+'" cy="'+mark[1]+'" r="'+mark[2]+'" fill="none" stroke="#C8102E" stroke-width="3"/>':'';
+  return '<svg class="boat" viewBox="0 0 520 300">'+
+    '<rect width="520" height="300" fill="#08243D"/>'+
+    '<rect y="234" width="520" height="66" fill="#0C3A5C"/>'+
+    '<polygon points="220,248 292,248 276,286 236,286" fill="#7E6B4A"/>'+
+    '<polygon points="404,244 421,242 417,280 402,280" fill="#7E6B4A"/>'+
+    '<polygon points="70,212 442,206 424,250 108,252" fill="#EFE6D0"/>'+
+    '<line x1="200" y1="212" x2="200" y2="40" stroke="#CBBE9E" stroke-width="6"/>'+
+    '<line x1="200" y1="44" x2="95" y2="212" stroke="#CBBE9E" stroke-width="2"/>'+
+    '<polygon points="205,50 205,192 336,200" fill="#DCE9F2" opacity=".9"/>'+
+    '<polygon points="197,54 100,208 194,202" fill="#C7D9E6" opacity=".9"/>'+
+    '<line x1="203" y1="197" x2="342" y2="204" stroke="#CBBE9E" stroke-width="6"/>'+
+    '<rect x="352" y="196" width="15" height="13" rx="2" fill="#CBBE9E"/>'+m+'</svg>';
+}
+
+/* =========================================================
+   Anzeige. Alle Fragen, Lösungen und Punkte kommen vom
+   Server. Dieser Teil zeichnet nur, was er geschickt bekommt.
+   ========================================================= */
+let aktuell=null, verfallHinweis=null;
+
+function titelVon(id){ const g=GAMES.find(x=>x.id===id); return g?g.title:""; }
+function bucht(id){ return ANKER.find(b=>b.id===id); }
+
+async function startGame(id, asPractice){
+  clearInterval(activeTimer);
+  practice=!!asPractice;
+  $("#practicebar").innerHTML = practice
+    ? '<div class="banner prac">Übungslauf. Zählt nicht und ändert nichts am Leaderboard. Bei Vokabeln und Kommandos werden die Fragen hier zufällig aus dem ganzen Bestand gezogen, also jedes Mal andere.</div>'
+    : '<div class="banner prac">Der Durchgang läuft. Wer jetzt zurückgeht oder die Seite neu lädt, dem wird der bis dahin erreichte Stand gewertet.</div>';
+  $("#gprog").textContent="";
+  $("#gamebody").innerHTML='<p class="sub">Wird geladen…</p>';
+  show("game");
+  const d=await api("start",{game:id, modus:practice?"uebung":"wertung"});
+  if(d.state) S=d.state;
+  if(d.verfallen) verfallHinweis=d.verfallen;
+  if(!d.ok){ verfallHinweis=verfallHinweis||{grund:d.grund}; renderHome(); show("home"); return; }
+  renderSchritt(d.schritt);
+}
+
+let sendetGerade=false;
+async function antwortSenden(nutzlast){
+  if(sendetGerade) return null;      // Doppelklicks abfangen
+  sendetGerade=true;
+  let d;
+  try{ d=await api("antwort",nutzlast); } finally { sendetGerade=false; }
+  if(!d.ok){
+    $("#gamebody").innerHTML='<div class="banner">'+(d.grund||"Der Server hat nicht geantwortet.")+'</div>';
+    const b=el("button","btn btn-go","Zurück an Deck");
+    b.addEventListener("click",zurueckAnDeck); $("#gamebody").appendChild(b);
+    return null;
+  }
+  if(d.state) S=d.state;
+  return d;
+}
+
+async function zurueckAnDeck(){
+  clearInterval(activeTimer);
+  const d=await api("abbruch");
+  if(d.state) S=d.state;
+  if(d.verfallen && d.verfallen.punkte!==undefined && !practice) verfallHinweis=d.verfallen;
+  practice=false; aktuell=null; $("#practicebar").innerHTML="";
+  renderHome(); show("home");
+}
+
+function renderSchritt(s){
+  aktuell=s;
+  clearInterval(activeTimer);
+  if(s.typ==="grid") return renderGrid(s);
+  if(s.typ==="anker") return renderAnker(s);
+  return renderMC(s);
+}
+
+/* --- Frage mit Antwortmöglichkeiten --- */
+function renderMC(s){
+  const body=$("#gamebody");
+  $("#gprog").innerHTML = titelVon(s.spiel)==="Bordkommandos"
+      ? 'Kommando '+s.nr+' von '+s.von+' &nbsp; <span class="timer" id="tm">'+s.uhr+'</span>'
+      : (s.zeitStand!==undefined
+          ? 'Vokabel '+s.nr+' von '+s.von+' &nbsp; <span class="timer" id="tm">'+s.zeitStand+' s</span>'
+          : 'Schritt '+s.nr+' von '+s.von);
+  body.innerHTML='<div class="gamehead"><h1>'+titelVon(s.spiel)+'</h1></div>'+
+    (s.zeitStand!==undefined?'<p class="sub">Die Uhr läuft nur, solange die Frage offen ist.</p>':'')+
+    (s.grafik && s.grafik.art==="boot" ? boatSVG(s.grafik.mark) : '')+
+    '<div class="panel"><p class="q">'+s.frage+'</p><div class="opts" id="o"></div><div id="fb"></div></div>';
+  const box=$("#o");
+  let gesperrt=false;
+  s.optionen.forEach((t,i)=>{
+    const b=el("button","opt",t);
+    b.addEventListener("click",()=>waehlen(i,b));
+    box.appendChild(b);
+  });
+  async function waehlen(i,b){
+    if(gesperrt) return; gesperrt=true;
+    clearInterval(activeTimer);
+    box.querySelectorAll(".opt").forEach(n=>n.disabled=true);
+    const d=await antwortSenden({wahl:i});
+    if(!d) return;
+    const f=d.feedback;
+    if(f){
+      const knoepfe=box.querySelectorAll(".opt");
+      if(knoepfe[f.loesungIndex]) knoepfe[f.loesungIndex].classList.add("right");
+      if(!f.richtig && b) b.classList.add("wrong");
+      $("#fb").innerHTML='<div class="fb'+(f.richtig?"":" bad")+'"><p>'+f.text+'</p></div>';
+    }
+    const tm=$("#tm"); if(tm && s.zeitStand!==undefined) tm.textContent += " · Uhr steht";
+    const n=el("button","btn btn-go", d.weiter?"Weiter":"Auswerten");
+    n.style.marginTop="16px";
+    n.addEventListener("click",()=>{ if(d.weiter) renderSchritt(d.weiter); else ergebnisAnzeigen(d); });
+    $("#fb").appendChild(n); n.focus();
+  }
+  // Uhren
+  if(s.uhr){
+    let rest=s.uhr;
+    activeTimer=setInterval(()=>{
+      rest--;
+      const tm=$("#tm"); if(tm){ tm.textContent=rest; if(rest<=5) tm.classList.add("hot"); }
+      if(rest<=0){ clearInterval(activeTimer); if(!gesperrt) waehlen(-1,null); }
+    },1000);
+  } else if(s.zeitStand!==undefined){
+    const t0=Date.now();
+    activeTimer=setInterval(()=>{
+      const tm=$("#tm");
+      if(tm && !gesperrt) tm.textContent=(s.zeitStand+Math.round((Date.now()-t0)/1000))+" s";
+    },250);
+  }
+}
+
+/* --- Ankerplatz --- */
+function renderAnker(s){
+  const b=bucht(s.bucht); const body=$("#gamebody");
+  $("#gprog").textContent="Bucht "+s.nr+" von "+s.von;
+  body.innerHTML='<div class="gamehead"><h1>Ankerplatz</h1></div><p class="q">'+b.brief+'</p>'+
+    '<svg class="scene" viewBox="0 0 400 240">'+b.svg+'<g id="spots"></g></svg>'+
+    '<div class="legend">'+b.legend+'</div><div id="fb"></div>';
+  const g=body.querySelector("#spots");
+  let gesperrt=false;
+  b.spots.forEach(sp=>{
+    const grp=document.createElementNS("http://www.w3.org/2000/svg","g");
+    grp.setAttribute("class","spot"); grp.setAttribute("tabindex","0"); grp.setAttribute("role","button");
+    grp.innerHTML='<circle cx="'+sp.x+'" cy="'+sp.y+'" r="15" fill="#04162B" stroke="#F5B301" stroke-width="2"/>'+
+      '<text x="'+sp.x+'" y="'+(sp.y+6)+'" text-anchor="middle" fill="#F5B301" font-size="16" font-family="Oswald,sans-serif">'+sp.id+'</text>';
+    const pick=()=>waehlen(sp.id);
+    grp.addEventListener("click",pick);
+    grp.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();} });
+    g.appendChild(grp);
+  });
+  async function waehlen(id){
+    if(gesperrt) return; gesperrt=true;
+    g.querySelectorAll(".spot").forEach(n=>n.style.pointerEvents="none");
+    const d=await antwortSenden({wahl:id});
+    if(!d) return;
+    const f=d.feedback;
+    g.querySelectorAll("circle").forEach((c,idx)=>{
+      const sid=b.spots[idx].id;
+      if(sid===f.loesung) c.setAttribute("stroke","#3FCF7F");
+      else if(sid===id) c.setAttribute("stroke","#C8102E");
+      else c.setAttribute("opacity",".35");
+    });
+    $("#fb").innerHTML='<div class="fb'+(f.richtig?"":" bad")+'"><p>'+f.text+'</p></div>';
+    const n=el("button","btn btn-go", d.weiter?"Nächste Bucht":"Auswerten");
+    n.style.marginTop="16px";
+    n.addEventListener("click",()=>{ if(d.weiter) renderSchritt(d.weiter); else ergebnisAnzeigen(d); });
+    $("#fb").appendChild(n); n.focus();
+  }
+}
+
+/* --- Schiffe versenken --- */
+function renderGrid(s){
+  const body=$("#gamebody");
+  $("#gprog").textContent="Ein Durchgang";
+  body.innerHTML='<div class="gamehead"><h1>Schiffe versenken</h1></div>'+
+    '<p class="sub" style="max-width:60ch">Die Flotte des Skippers liegt irgendwo in diesem Quadrat. Du hast '+s.budget+
+    ' Schuss. Kein Schiff berührt ein anderes, auch nicht über Eck. Wo die Schiffe liegen, weiß nur der Server.</p>'+
+    '<div class="panel"><div class="disp" style="font-size:20px;margin-bottom:10px" id="ammo"></div>'+
+    '<div class="battle"><div class="grid" id="grid"></div><ul class="fleet" id="fleet"></ul></div>'+
+    '<div id="fb"></div></div>';
+  zeichneGrid(s);
+}
+function zeichneGrid(s){
+  aktuell=s;
+  $("#ammo").innerHTML='Schuss '+s.schuesse+' von '+s.budget+' &nbsp;·&nbsp; Treffer '+s.treffer+' von '+s.gesamt;
+  $("#fleet").innerHTML=s.flotte.map(f=>'<li class="'+(f.dead?"dead":"")+'"><span>'+f.n+
+    '</span><span class="tnum">'+(f.dead?"versenkt":f.hits+"/"+f.len)+'</span></li>').join("");
+  const gd=$("#grid");
+  if(gd.children.length===0){
+    for(let i=0;i<s.n*s.n;i++){
+      const b=el("button","cell","");
+      b.addEventListener("click",()=>schiessen(i));
+      gd.appendChild(b);
+    }
+  }
+  for(let i=0;i<s.n*s.n;i++){
+    const c=gd.children[i], z=s.felder[String(i)];
+    c.className="cell"+(z==="wasser"?" miss":z==="treffer"?" hit":z==="versenkt"?" sunk":"");
+    c.textContent = z==="wasser" ? "·" : (z?"✕":"");
+    c.disabled = !!z;
+  }
+}
+async function schiessen(i){
+  const d=await antwortSenden({feld:i});
+  if(!d) return;
+  if(d.weiter) zeichneGrid(d.weiter);
+  else{
+    $("#grid").querySelectorAll(".cell").forEach(c=>c.disabled=true);
+    ergebnisAnzeigen(d);
+  }
+}
+
+/* --- Ergebnis eines Durchgangs --- */
+function ergebnisAnzeigen(d){
+  clearInterval(activeTimer);
+  const e=d.ergebnis, spiel=aktuell?aktuell.spiel:null;
+  const body=$("#gamebody");
+  $("#gprog").textContent="";
+  if(practice){
+    const gewertet=scoresOf()[spiel];
+    body.innerHTML='<h1>'+e.punkte+' von 100</h1>'+
+      '<p class="sub">Übungslauf. Zählt nicht. Gewertet stehen weiterhin '+gewertet+' Punkte.</p>'+
+      '<div class="panel">'+e.zeilen.map(l=>'<p>'+l+'</p>').join("")+'</div>';
+    const again=el("button","btn","Nochmal üben");
+    again.style.marginTop="18px";
+    again.addEventListener("click",()=>startGame(spiel,true));
+    const back=el("button","btn btn-go","Zurück an Deck");
+    back.style.cssText="margin-top:18px;margin-left:10px";
+    back.addEventListener("click",()=>{ practice=false; aktuell=null; $("#practicebar").innerHTML=""; renderHome(); show("home"); });
+    body.appendChild(again); body.appendChild(back);
+    return;
+  }
+  justEarned=spiel;
+  body.innerHTML='<h1>'+e.punkte+' von 100</h1>'+
+    halyardHTML(scoresOf(), spiel)+
+    '<p class="sub">Flagge steht. Ein Buchstabe mehr an der Leine.</p>'+
+    '<div class="panel">'+e.zeilen.map(l=>'<p>'+l+'</p>').join("")+'</div>';
+  const b=el("button","btn btn-go","Zurück an Deck");
+  b.style.marginTop="18px";
+  b.addEventListener("click",()=>{ practice=false; aktuell=null; $("#practicebar").innerHTML=""; renderHome(); show("home"); });
+  body.appendChild(b);
+}
+
+/* =========================================================
+   Auflösung
+   ========================================================= */
+function volcanoSVG(){
+  const R=(a,b)=>a+Math.random()*(b-a);
+  let lava="";
+  for(let i=0;i<34;i++){
+    lava+='<circle class="lava" cx="476" cy="124" r="'+R(1.4,4.2).toFixed(1)+'" fill="'+
+      (i%4?"#FF8A2B":"#FFE07A")+'" style="--lx:'+R(-78,78).toFixed(0)+'px;--ly:'+R(-235,-90).toFixed(0)+
+      'px;animation-delay:'+R(0,1.9).toFixed(2)+'s"/>';
+  }
+  let bombs="";
+  for(let i=0;i<9;i++){
+    const dir=i%2?1:-1;
+    bombs+='<circle class="bomb" cx="476" cy="124" r="'+R(2.6,5).toFixed(1)+'" fill="#FF6A1A" '+
+      'style="--bx:'+(dir*R(70,190)).toFixed(0)+'px;--by:'+R(70,150).toFixed(0)+
+      'px;animation-delay:'+R(0,3.4).toFixed(2)+'s"/>';
+  }
+  let smoke="";
+  for(let i=0;i<10;i++){
+    smoke+='<ellipse class="smoke" cx="476" cy="112" rx="'+R(20,34).toFixed(0)+'" ry="'+R(14,24).toFixed(0)+
+      '" fill="'+(i%3?"#6A5F72":"#877A8C")+'" style="--sx:'+R(-70,50).toFixed(0)+
+      'px;animation-delay:'+R(0,7).toFixed(2)+'s"/>';
+  }
+  let embers="";
+  for(let i=0;i<20;i++){
+    embers+='<circle class="ember" cx="'+R(380,600).toFixed(0)+'" cy="'+R(120,190).toFixed(0)+
+      '" r="'+R(.8,1.9).toFixed(1)+'" fill="#FFB347" style="--ex:'+R(-40,50).toFixed(0)+
+      'px;animation-delay:'+R(0,5).toFixed(2)+'s"/>';
+  }
+  let stars="";
+  for(let i=0;i<28;i++){
+    stars+='<circle cx="'+R(0,680).toFixed(0)+'" cy="'+R(0,200).toFixed(0)+'" r="'+R(.4,1.4).toFixed(1)+
+      '" fill="#EFE6D0" opacity="'+R(.2,.8).toFixed(2)+'"/>';
+  }
+  return '<svg class="finale" viewBox="0 0 680 400" role="img" aria-label="Segelboot vor einem ausbrechenden Vulkan bei Nacht">'+
+   '<defs>'+
+     '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'+
+       '<stop offset="0" stop-color="#04081A"/><stop offset=".6" stop-color="#1B1030"/><stop offset="1" stop-color="#3A1A2E"/></linearGradient>'+
+     '<radialGradient id="wash" cx=".7" cy=".78" r=".62">'+
+       '<stop offset="0" stop-color="#FF6A00" stop-opacity=".38"/><stop offset="1" stop-color="#FF6A00" stop-opacity="0"/></radialGradient>'+
+     '<radialGradient id="cg"><stop offset="0" stop-color="#FFF0B0" stop-opacity="1"/>'+
+       '<stop offset=".45" stop-color="#FF9A2B" stop-opacity=".8"/><stop offset="1" stop-color="#FF5A00" stop-opacity="0"/></radialGradient>'+
+     '<linearGradient id="refl" x1="0" y1="0" x2="0" y2="1">'+
+       '<stop offset="0" stop-color="#FF8A2B" stop-opacity=".5"/><stop offset="1" stop-color="#FF6A00" stop-opacity="0"/></linearGradient>'+
+   '</defs>'+
+   '<rect width="680" height="400" fill="url(#sky)"/>'+stars+
+   '<circle cx="104" cy="60" r="19" fill="#EFE6D0" opacity=".8"/><circle cx="95" cy="54" r="19" fill="#0A0F22" opacity=".92"/>'+
+   '<rect width="680" height="400" fill="url(#wash)"/>'+
+   smoke+
+   '<polygon points="0,318 90,268 150,300 220,262 300,318" fill="#140C22"/>'+
+   '<polygon points="288,318 442,142 458,124 494,124 512,144 668,318" fill="#150D22"/>'+
+   '<polygon points="458,124 494,124 512,144 442,142" fill="#2A1A32"/>'+
+   '<path class="flowline" d="M482 132 L498 196 L478 250 L492 316" stroke="#FF5A1F" stroke-width="5" fill="none" stroke-linecap="round"/>'+
+   '<path class="flowline" d="M470 132 L444 190 L456 248 L436 316" stroke="#FF7A2B" stroke-width="3" fill="none" stroke-linecap="round" style="animation-delay:.8s"/>'+
+   '<path class="flowline" d="M488 134 L520 200 L546 262" stroke="#FF9A3B" stroke-width="2" fill="none" stroke-linecap="round" style="animation-delay:1.4s"/>'+
+   '<ellipse class="glow" cx="476" cy="126" rx="92" ry="58" fill="url(#cg)"/>'+
+   lava+bombs+embers+
+   '<rect y="318" width="680" height="82" fill="#08152C"/>'+
+   '<polygon points="446,320 506,320 540,400 412,400" fill="url(#refl)"/>'+
+   '<ellipse class="glow" cx="476" cy="326" rx="64" ry="10" fill="#FF7A2B" opacity=".4"/>'+
+   '<g class="wv" opacity=".45"><path d="M-60 340 q30 -6 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" stroke="#2A6A96" stroke-width="2" fill="none"/></g>'+
+   '<g class="wv" opacity=".3" style="animation-duration:9s"><path d="M-60 366 q30 6 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" stroke="#2A6A96" stroke-width="2" fill="none"/></g>'+
+   '<g class="rock">'+
+     '<polygon points="86,326 214,322 200,350 104,352" fill="#07070E"/>'+
+     '<line x1="146" y1="324" x2="146" y2="184" stroke="#07070E" stroke-width="5"/>'+
+     '<polygon points="150,190 150,318 216,320" fill="#07070E"/>'+
+     '<polygon points="142,194 92,316 140,314" fill="#07070E"/>'+
+   '</g></svg>';
+}
+function confetti(){
+  try{
+  if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv=$("#confetti"); cv.hidden=false;
+  const ctx=cv.getContext("2d");
+  const dpr=window.devicePixelRatio||1;
+  function size(){ cv.width=innerWidth*dpr; cv.height=innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  size(); addEventListener("resize",size);
+  const cols=["#C8102E","#F5B301","#1B4FA0","#EFE6D0","#2E7D4F"];
+  const P=Array.from({length:190},()=>({
+    x:Math.random()*innerWidth, y:-20-Math.random()*innerHeight*.6,
+    w:5+Math.random()*7, h:8+Math.random()*10,
+    vy:1.7+Math.random()*3.1, vx:(Math.random()-.5)*1.6,
+    a:Math.random()*Math.PI, va:(Math.random()-.5)*.22,
+    c:cols[(Math.random()*cols.length)|0]
+  }));
+  const t0=Date.now();
+  (function frame(){
+    const life=Date.now()-t0;
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    P.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.globalAlpha = life>5200 ? Math.max(0,1-(life-5200)/1600) : 1;
+      ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    });
+    if(life<6800) requestAnimationFrame(frame);
+    else { ctx.clearRect(0,0,innerWidth,innerHeight); cv.hidden=true; }
+  })();
+  }catch(e){ $("#confetti").hidden=true; }
+}
+async function openReveal(){
+  const antwort=await api("reveal");
+  if(!antwort.ok){
+    $("#offline-note").innerHTML='<div class="banner">'+(antwort.grund||"Die Auflösung ist noch gesperrt.")+'</div>';
+    renderHome(); show("home"); return;
+  }
+  const H=antwort.hafen, s=scoresOf();
+  const rank=((S&&S.board)||[]).findIndex(x=>x.user===me.user)+1;
+  $("#revealbody").innerHTML=
+    volcanoSVG()+
+    '<p class="sub" style="margin-top:18px">'+H.lead+'</p>'+
+    '<p class="sub" style="margin:0 auto 4px;max-width:52ch">'+H.tease+'</p>'+
+    '<div class="bigplace">'+H.place+'</div>'+
+    '<h2 style="color:var(--paper)">'+H.country+'</h2>'+
+    '<p class="sub" style="margin:18px auto;max-width:54ch">'+H.body+'</p>'+
+    '<p class="sub" style="margin:0 auto 10px;max-width:54ch">'+H.note+'</p>'+
+    '<div class="panel" style="max-width:430px;margin:22px auto;text-align:left">'+
+      '<div class="sub">Törn-Diplom</div><div class="disp" style="font-size:26px;margin:4px 0 10px">'+me.name+'</div>'+
+      GAMES.map(g=>'<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--rule);padding:6px 0">'+
+        '<span>'+g.title+'</span><span class="tnum">'+(s[g.id]||0)+'</span></div>').join("")+
+      '<div style="display:flex;justify-content:space-between;padding:10px 0;font-family:Oswald,sans-serif;font-size:20px">'+
+        '<span>Gesamt</span><span class="tnum">'+totalOf()+' von 500</span></div>'+
+      '<div class="sub">Platz '+rank+' von '+((S&&S.board)||[]).length+' im Leaderboard.</div>'+
+    '</div>'+
+    '<button class="btn" id="backfromreveal">Zurück an Deck</button>';
+  $("#backfromreveal").addEventListener("click",()=>{ renderHome(); show("home"); });
+  show("reveal"); confetti();
+}
+
+(async function start(){
+  const d=await api("state");
+  if(d.ok){ S=d; if(d.verfallen) verfallHinweis=d.verfallen; renderHome(); show("home"); }
+  else { show("login"); $("#u").focus(); }
+})();
+</script>
+</body>
+</html>
