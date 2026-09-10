@@ -1,5 +1,9 @@
-FROM nginx:alpine
+FROM php:8.3-apache-bookworm
 
-COPY . /usr/share/nginx/html
+RUN docker-php-ext-install pdo_sqlite
 
-CMD ["nginx", "-g", "daemon off;"]
+COPY . /var/www/html/
+
+RUN mkdir -p /var/www/html/daten \
+	&& chown -R www-data:www-data /var/www/html/daten \
+	&& chmod 775 /var/www/html/daten
